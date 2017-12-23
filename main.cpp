@@ -13,56 +13,69 @@ struct logging_allocator
     int block_size;
     int allocated_blocks;
     int head;
-    //void *p;
+    T *head_ptr;
+    void *p;
 
-    logging_allocator(int block_size_ = 5)
+    logging_allocator(int block_size_ = 10)
     {
         block_size = block_size_;
         allocated_blocks = 0;
         head = 0;
+        p = nullptr;
         cout << "logging_allocator(int) ctor, block_size = " << block_size << endl;
     }
 
     T* allocate(size_t n)
     {
-/*        int blocs_to_allocate = 0;
-        if (head == 0)
+        if (allocated_blocks == 0)
         {
-            blocs_to_allocate = (n % block_size) + (n/block_size ? 1 : 0);
-        }
-
-        if (head + n <= block_size)
-        {
-
-        }
-
-        if (blocks_to_allocate)
-        {*/
-            auto p = malloc(n * sizeof(T));
-            cout << "allocate " << block_size * n << "\t at " << p << endl;
+            p = malloc(block_size * sizeof(T));
+            cout << "allocate malloc " << block_size << "\t at " << p << endl;
             if(!p)
+            {
                 throw bad_alloc();
-        //}
-        return reinterpret_cast<T *>(p);
+            }
+            allocated_blocks++;
+            head++;
+            head_ptr = reinterpret_cast<T *>(p);
+        }
+        else
+        {
+            head += n;
+            head_ptr += n * sizeof(T);
+            cout << "allocate move ptr " << n << "\t at " << head_ptr << endl;
+        }
+
+        return head_ptr;
     }
 
-    void deallocate(T* p, size_t n)
+    void deallocate(T* pp, size_t n)
     {
-        cout << "dealloca " << n << "\t at " << p << endl;
-        free(p);
+        if (head > 0)
+        {
+            head -= n;
+            head_ptr -= n * sizeof(T);
+            cout << "deallocate move ptr " << n << "\t at " << head_ptr << endl;
+        }
+
+        if(head <= 0)
+        {
+            cout << "deallocate free " << n << "\t at " << p << endl;
+            free(p);
+        }
     }
 
     template<typename U, typename ...Args>
     void construct(U* p, Args&& ...args)
     {
-        cout << "construct " << "\t at " << p << endl;
+        cout << "construct " << "\t\t at " << p << endl;
         new(p) U(forward<Args>(args) ...);
     }
 
     void destroy(T* p)
     {
         p->~T();
-        cout << "destroy " << "\t at " << p << endl;
+        cout << "destroy " << "\t\t at " << p << endl;
     }
 
 };
@@ -79,16 +92,41 @@ int main()
 {
     cout << "version " << version() << endl << endl;
 
-    auto v = vector<int, logging_allocator<int>>{};
+//    auto v = vector<int, logging_allocator<int>>{};
 
-    for(size_t i = 0; i < 5; ++i)
+//    for(size_t i = 0; i < 5; ++i)
+//    {
+//        v.emplace_back(i);
+//    }
+
+//    for (auto i :v)
+//    {
+//        cout << i << endl;
+//    }
+
+    cout << endl << "map1:" << endl;
+    auto m1 = map<int, int>{};
+    for(size_t i = 0; i < 10; ++i)
     {
-        v.emplace_back(i);
+        m1.insert(pair<int, int>{i, fact(i)});
     }
 
-    for (auto i :v)
+    for(auto mm : m1)
     {
-        cout << i << endl;
+        cout << mm.first << "\t" << mm.second << endl;
     }
+
+    cout << endl << "map2:" << endl;
+    auto m2 = map<int, int, less<int>, logging_allocator<pair<const int, int>>>{};
+    for(size_t i = 0; i < 10; ++i)
+    {
+        m2.insert(pair<int, int>{i, fact(i)});
+    }
+
+    for(auto mm : m2)
+    {
+        cout << mm.first << "\t" << mm.second << endl;
+    }
+
     return 0;
 }
