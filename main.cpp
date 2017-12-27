@@ -1,6 +1,7 @@
 #include <iostream>
 #include <map>
 #include <vector>
+#include <memory>
 
 #include "version.h"
 
@@ -143,6 +144,40 @@ struct custom_allocator
 
 };
 
+template <class T, class A = allocator<T>>
+class custom_list
+{
+public:
+    using value_type = T;
+    using allocator_type = A;
+    using iterator = typename A::pointer;
+    T value;
+    custom_list *next;
+
+private:
+    A alloc;
+    iterator v;
+
+public:
+    custom_list(size_t n, const T& val = T(), const A& a = A()) : alloc(a)
+    {
+        for (iterator p = v; p < v+n; ++p)
+        {
+            alloc.construct(p, val);
+        }
+    }
+
+    void insert_next(const T& value)
+    {
+        this->next = custom_list(1, value);
+    }
+
+    custom_list *get_next()
+    {
+        return this->next;
+    }
+};
+
 int fact (int n)
 {
     int r = 1;
@@ -168,7 +203,7 @@ int main()
 //        cout << i << endl;
 //    }
 
-    cout << endl << "map1:" << endl;
+    cout << endl << "map 1:" << endl;
     auto m1 = map<int, int>{};
     for(size_t i = 0; i < SIZE; ++i)
     {
@@ -180,7 +215,7 @@ int main()
         cout << mm.first << " " << mm.second << endl;
     }
 
-    cout << endl << "map2:" << endl;
+    cout << endl << "map 2:" << endl;
     auto m2 = map<int, int, less<int>, custom_allocator<pair<const int, int>>>{};
     for(size_t i = 0; i < SIZE; ++i)
     {
@@ -191,6 +226,20 @@ int main()
     {
         cout << mm.first << " " << mm.second << endl;
     }
+
+    cout << endl << "custom list 1:" << endl;
+    auto cl1 = custom_list<int>(1, 0);
+    for(size_t i = 1; i < SIZE; ++i)
+    {
+        cl1.insert_next(i);
+    }
+    while(cl1.next)
+    {
+        cout << cl1.value <<  endl;
+        cl1 = cl1.next
+    }
+
+
 
     return 0;
 }
