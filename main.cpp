@@ -15,6 +15,10 @@ template <typename T>
 struct custom_allocator
 {
     using value_type = T;
+
+    template< class U >
+    struct rebind { typedef allocator<U> other; };
+
     int block_size;
     int allocated_blocks;
     int head;
@@ -126,9 +130,6 @@ class custom_list
 public:
     using value_type = T;
     using allocator_type = A;
-
-    template< class U >
-    struct rebind { typedef allocator<U> other; };
 
 private:
     A alloc;
