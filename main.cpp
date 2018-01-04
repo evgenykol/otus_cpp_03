@@ -2,7 +2,8 @@
 #include <map>
 #include <vector>
 #include <memory>
-
+#include <cstring>
+#include <list>
 #include "version.h"
 
 #define ENABLE_LOGGING
@@ -16,6 +17,11 @@ struct logging_allocator
 {
     using value_type = T;
 
+    logging_allocator()
+    {
+        cout << "logging_allocator ctor, sizeof(T) = " << sizeof(T) << endl;
+
+    }
     T* allocate(size_t n)
     {
         auto p = malloc(n * sizeof(T));
@@ -109,7 +115,7 @@ struct custom_allocator
         if(allocated_blocks && (head <= 0))
         {
 #ifdef ENABLE_LOGGING
-            cout << "deallocate free " << n << "\t at " << pp << endl;
+            cout << "deallocate free " << n << "\t at " << p << endl;
 #endif
             free(p);
             allocated_blocks--;
@@ -144,37 +150,85 @@ struct custom_allocator
 
 };
 
-template <class T, class A = allocator<T>>
+template <typename T>
+struct custom_node
+{
+    using value_type = T;
+    T value;
+    custom_node *next;
+
+    custom_node() : value(0), next(nullptr) {}
+    custom_node(T val) : value(val), next(nullptr) {}
+    custom_node(T val, custom_node *nxt) : value(val), next(nxt) {}
+    ~custom_node() {}
+};
+
+template <typename T, typename A = allocator<T>>
 class custom_list
 {
 public:
     using value_type = T;
     using allocator_type = A;
-    using iterator = typename A::pointer;
-    T value;
-    custom_list *next;
 
 private:
     A alloc;
-    iterator v;
+    using node_type = T;
+
+    node_type *nodes;
+    node_type *head;
 
 public:
-    custom_list(size_t n, const T& val = T(), const A& a = A()) : alloc(a)
+
+    custom_list(const A& a = A()) : alloc(a)
     {
-        for (iterator p = v; p < v+n; ++p)
+        nodes = nullptr;
+        head = nullptr;
+    }
+
+    ~custom_list()
+    {
+        while(nodes)
         {
-            alloc.construct(p, val);
+            head = nodes->next;
+
+            alloc.destroy(nodes);
+            alloc.deallocate(nodes, 1);
+
+            nodes = head;
         }
     }
 
     void insert_next(const T& value)
     {
-        this->next = custom_list(1, value);
+        auto node = alloc.allocate(1);
+        alloc.construct(node, value);
+        if (nodes == nullptr)
+        {
+            nodes = node;
+            head = node;
+        }
+        else
+        {
+            head->next = node;
+            head = node;
+        }
     }
 
-    custom_list *get_next()
+    node_type *get_next()
     {
-        return this->next;
+        head = head->next;
+        return head;
+    }
+
+    typename T::value_type get_value()
+    {
+        return head->value;
+    }
+
+    T* get_first()
+    {
+        head = nodes;
+        return head;
     }
 };
 
@@ -186,60 +240,86 @@ int fact (int n)
     return r;
 }
 
-int main()
+int main(int argc, char const *argv[])
 {
-    cout << "version " << version() << endl << endl;
-
-//    auto v = vector<int, custom_allocator<int>>{};
-//    v.reserve(10);
-
-//    for(size_t i = 0; i < 10; ++i)
-//    {
-//        v.emplace_back(i);
-//    }
-
-//    for (auto i :v)
-//    {
-//        cout << i << endl;
-//    }
-
-    cout << endl << "map 1:" << endl;
-    auto m1 = map<int, int>{};
-    for(size_t i = 0; i < SIZE; ++i)
+    if ((argc > 1) &&
+       (!strncmp(argv[1], "-v", 2) || !strncmp(argv[1], "--version", 9)))
     {
-        m1.emplace(pair<int, int>{i, fact(i)});
+        cout << "version " << version() << endl;
+        return 0;
     }
 
-    for(auto mm : m1)
+    try
     {
-        cout << mm.first << " " << mm.second << endl;
-    }
+//        auto v = vector<int, logging_allocator<int>>{};
+//        v.reserve(10);
 
-    cout << endl << "map 2:" << endl;
-    auto m2 = map<int, int, less<int>, custom_allocator<pair<const int, int>>>{};
-    for(size_t i = 0; i < SIZE; ++i)
+//        for(size_t i = 0; i < 10; ++i)
+//        {
+//            v.emplace_back(i);
+//        }
+
+//        for (auto i :v)
+//        {
+//            cout << i << endl;
+//        }
+
+    //    cout << endl << "map 1:" << endl;
+    //    auto m1 = map<int, int>{};
+    //    for(size_t i = 0; i < SIZE; ++i)
+    //    {
+    //        m1.emplace(pair<int, int>{i, fact(i)});
+    //    }
+
+    //    for(auto mm : m1)
+    //    {
+    //        cout << mm.first << " " << mm.second << endl;
+    //    }
+
+    //    cout << endl << "map 2:" << endl;
+    //    auto m2 = map<int, int, less<int>, custom_allocator<pair<const int, int>>>{};
+    //    for(size_t i = 0; i < SIZE; ++i)
+    //    {
+    //        m2.emplace(pair<int, int>{i, fact(i)});
+    //    }
+
+    //    for(auto mm : m2)
+    //    {
+    //        cout << mm.first << " " << mm.second << endl;
+    //    }
+
+//        cout << endl << "custom list 1:" << endl;
+//        auto cl1 = custom_list<custom_node<int>, logging_allocator<custom_node<int>>>{};
+
+//        for(int i = 0; i < SIZE; i++)
+//        {
+//            cl1.insert_next(i);
+//        }
+
+//        auto node = cl1.get_first();
+//        do
+//        {
+//            cout << cl1.get_value() << endl;
+//        } while ((node = cl1.get_next()));
+
+
+        cout << endl << "custom list 2:" << endl;
+        auto cl2 = custom_list<custom_node<int>, custom_allocator<custom_node<int>>>{};
+
+        for(int i = 0; i < SIZE; i++)
+        {
+            cl2.insert_next(i);
+        }
+
+        auto node = cl2.get_first();
+        do
+        {
+            cout << cl2.get_value() << endl;
+        } while ((node = cl2.get_next()));
+    }
+    catch (const exception &e)
     {
-        m2.emplace(pair<int, int>{i, fact(i)});
+        cout << "Exception: " << e.what() << endl;
     }
-
-    for(auto mm : m2)
-    {
-        cout << mm.first << " " << mm.second << endl;
-    }
-
-    cout << endl << "custom list 1:" << endl;
-    auto cl1 = custom_list<int>(1, 0);
-    for(size_t i = 1; i < SIZE; ++i)
-    {
-        cl1.insert_next(i);
-    }
-    while(cl1.next)
-    {
-        cout << cl1.value <<  endl;
-        cl1 = cl1.next
-    }
-
-
-
     return 0;
 }
