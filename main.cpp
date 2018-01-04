@@ -127,6 +127,9 @@ public:
     using value_type = T;
     using allocator_type = A;
 
+    template< class U >
+    struct rebind { typedef allocator<U> other; };
+
 private:
     A alloc;
     using node_type = T;
