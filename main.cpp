@@ -221,7 +221,7 @@ int main(int argc, char const *argv[])
 //        }
 
 
-//        cout << endl << "map 2:" << endl;
+        cout << endl << "map 2:" << endl;
         auto m2 = map<int, int, less<int>, custom_allocator<pair<const int, int>>>{};
         for(size_t i = 0; i < SIZE; ++i)
         {
@@ -246,7 +246,7 @@ int main(int argc, char const *argv[])
 //        } while ((node = cl1.get_next()));
 
 
-        //cout << endl << "custom list 2:" << endl;
+        cout << endl << "custom list 2:" << endl;
         auto cl2 = custom_list<custom_node<int>, custom_allocator<custom_node<int>>>{};
         for(int i = 0; i < SIZE; i++)
         {
