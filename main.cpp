@@ -19,6 +19,12 @@ struct custom_allocator
     template< class U >
     struct rebind { typedef custom_allocator<U> other; };
 
+      typedef T*        pointer;
+      typedef const T*  const_pointer;
+      typedef T&        reference;
+      typedef const T&  const_reference;
+
+
     int block_size;
     int allocated_blocks;
     int head;
